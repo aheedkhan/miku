@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "miku-hermes"
+version = "0.1.0"
+description = "Miku — a local, portable agentic assistant running on Ollama, for security research, malware dev/analysis, Android work, and pentesting."
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "numpy>=1.26",
+    "ddgs>=9.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+hermes = "hermes.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["hermes*"]
+
+[tool.setuptools.package-data]
+hermes = ["persona/*.md"]

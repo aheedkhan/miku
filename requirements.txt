@@ -1,0 +1,7 @@
+# Pinned to versions verified to have prebuilt wheels (no compiler needed) as of Aug 2026.
+# Ollama is spoken to over plain HTTP (httpx) against its documented JSON API — no ollama-python
+# dependency, to keep exactly what's happening on the wire verifiable and version-independent.
+httpx>=0.27
+pyyaml>=6.0
+numpy>=1.26
+ddgs>=9.0

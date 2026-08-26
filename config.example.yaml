@@ -1,0 +1,52 @@
+# Copy this to $XDG_CONFIG_HOME/hermes/config.yaml (usually ~/.config/hermes/config.yaml)
+# and edit — install.sh does this for you on first run.
+#
+# On a normal machine, leave ollama_host as-is (Ollama runs locally).
+# On a Qubes client VM talking to a dedicated Ollama VM, point this at that VM's
+# internal IP instead — see docs/qubes-deployment.md. This can also be overridden
+# per-shell with the OLLAMA_HOST env var without editing this file.
+ollama_host: "http://127.0.0.1:11434"
+
+# Per-role model map. Names must match `ollama list` on whichever host ollama_host points at.
+# num_ctx is passed explicitly on every request — Ollama silently caps context at 4096
+# otherwise, regardless of what a model advertises. Bigger num_ctx = slower on CPU-bound
+# hardware, so start conservative and raise it once you've benchmarked tokens/sec.
+models:
+  default:
+    name: "huihui_ai/qwen3-abliterated:30b"
+    num_ctx: 8192
+  code:
+    name: "qwen3-coder:30b"
+    num_ctx: 16384
+  fast:
+    name: "huihui_ai/gpt-oss-abliterated:20b"
+    num_ctx: 8192
+  embed:
+    name: "nomic-embed-text"
+    num_ctx: 2048
+
+# Where to look for reference docs to RAG-ingest. Defaults to ./knowledge next to this repo.
+# knowledge_dir: "/home/you/Documents/miku/knowledge"
+
+# External codebases/doc trees Miku should track alongside knowledge/ — e.g. a course
+# project or FYP you're coding with her on. Daily-refreshed the same way as CVE deltas
+# (mtime+hash diff, re-embed changed files, prune deleted ones); you can also trigger it
+# by hand with /refresh-cve. Retrieval can scope to one project by name.
+# projects:
+#   - name: "fyp-mdm"
+#     path: "/home/you/path/to/fyp-repo"
+#     # include/exclude default to common doc+code extensions if omitted — see hermes/config.py
+
+# Key-free by default. Set to "searxng" + searxng_url if you run your own instance.
+search_backend: "ddgs"
+# searxng_url: "http://127.0.0.1:8080"
+
+shell:
+  # Default is "confirm" per-command (see shell_tool.py's allow/confirm/deny tiers) —
+  # this only blanket-auto-confirms everything, which you probably don't want on by default.
+  auto_confirm: false
+
+# Optional — leave unset to use key-free defaults / graceful "not configured" tool responses.
+# github_token: ""
+# nvd_api_key: ""
+# malwarebazaar_auth_key: ""
