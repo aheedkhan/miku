@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Starts the WhatsApp channel: the Node.js Baileys bridge in the background, then the
+# Python relay (hermes-whatsapp) in the foreground. Ctrl+C stops both (trap below kills
+# the bridge when this script exits, however it exits). Self-contained in this repo --
+# no external HERMES_HOME needed.
+#
+# First-time setup: prints a QR code the first time it runs (no saved session yet). Scan
+# it from the DEDICATED number's WhatsApp app: Settings -> Linked Devices -> Link a Device.
+# The session then persists under $WHATSAPP_SESSION_DIR, so you only do this once.
+#
+# Required before running: WHATSAPP_ALLOWED_USERS set in .env to your main number, digits
+# only with country code, no + or spaces (e.g. 15551234567).
+set -euo pipefail
+
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+MIKU_SRC="$(cd "$(dirname "$SELF")/.." && pwd)"
+WHATSAPP_RELAY_BIN="$MIKU_SRC/.venv/bin/hermes-whatsapp"
+BRIDGE_DIR="$MIKU_SRC/whatsapp-bridge"
+
+if [[ -f "$MIKU_SRC/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$MIKU_SRC/.env"
+  set +a
+fi
+
+if [[ -z "${WHATSAPP_ALLOWED_USERS:-}" ]]; then
+  echo "WHATSAPP_ALLOWED_USERS is not set (in $MIKU_SRC/.env) -- the bridge will reject" >&2
+  echo "every incoming message until it is. Set it to your main number: digits + country" >&2
+  echo "code only, e.g. WHATSAPP_ALLOWED_USERS=15551234567" >&2
+  exit 1
+fi
+export WHATSAPP_MODE="${WHATSAPP_MODE:-bot}"
+
+if [[ ! -x "$WHATSAPP_RELAY_BIN" ]]; then
+  echo "hermes-whatsapp not found at $WHATSAPP_RELAY_BIN. Run: (cd $MIKU_SRC && ./install.sh)" >&2
+  exit 1
+fi
+
+NODE_BIN="node"
+if [[ -x "$HOME/.hermes/node/bin/node" ]]; then
+  NODE_BIN="$HOME/.hermes/node/bin/node"
+fi
+
+PORT="${WHATSAPP_BRIDGE_PORT:-3000}"
+export WHATSAPP_BRIDGE_URL="http://127.0.0.1:$PORT"
+SESSION_DIR="${WHATSAPP_SESSION_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/hermes/whatsapp-session}"
+mkdir -p "$SESSION_DIR"
+
+echo "Starting WhatsApp bridge (port $PORT, session $SESSION_DIR)..." >&2
+"$NODE_BIN" "$BRIDGE_DIR/bridge.js" --port "$PORT" --session "$SESSION_DIR" &
+BRIDGE_PID=$!
+trap 'kill "$BRIDGE_PID" 2>/dev/null || true' EXIT
+
+sleep 3
+exec "$WHATSAPP_RELAY_BIN"

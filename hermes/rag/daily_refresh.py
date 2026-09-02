@@ -21,7 +21,8 @@ from hermes.rag.ingest import IngestPipeline
 from hermes.tools.cve_tool import list_recent_android_cves
 from hermes.tools.malware_bazaar_tool import mb_get_recent
 
-_STATE_KEY = "daily_refresh_last_run"
+_STATE_KEY = "rag_refresh_last_run"
+_LEGACY_STATE_KEY = "daily_refresh_last_run"
 
 # MalwareBazaar tags pulled daily for cross-platform sample intel (metadata only — see
 # malware_bazaar_tool.py's module docstring). File-type tags (exe/dll/elf) are more reliable
@@ -39,8 +40,8 @@ def _open_state_db(config: HermesConfig) -> sqlite3.Connection:
     return conn
 
 
-def _get_last_run(conn: sqlite3.Connection) -> str | None:
-    row = conn.execute("SELECT value FROM kv_state WHERE key = ?", (_STATE_KEY,)).fetchone()
+def _get_last_run(conn: sqlite3.Connection, key: str = _STATE_KEY) -> str | None:
+    row = conn.execute("SELECT value FROM kv_state WHERE key = ?", (key,)).fetchone()
     return row[0] if row else None
 
 
@@ -66,7 +67,7 @@ async def run_daily_refresh(
 
     conn = _open_state_db(config)
     try:
-        last_run_iso = _get_last_run(conn)
+        last_run_iso = _get_last_run(conn) or _get_last_run(conn, _LEGACY_STATE_KEY)
         now = datetime.now(timezone.utc)
         if last_run_iso:
             try:

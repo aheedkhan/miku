@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Launch Miku (Hermes). Self-contained -- no external HERMES_HOME needed; skills/knowledge/
+# config all live inside this repo (or ~/.config/hermes, ~/.local/share/hermes via XDG).
+# Default working directory: FYP tree (override with MIKU_WORKDIR).
+set -euo pipefail
+
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+MIKU_SRC="$(cd "$(dirname "$SELF")/.." && pwd)"
+FYP_DEFAULT="/home/mania/Documents/FYP"
+WORKDIR="${MIKU_WORKDIR:-$FYP_DEFAULT}"
+
+MIKU_BIN="$MIKU_SRC/.venv/bin/miku"
+if [[ ! -x "$MIKU_BIN" ]]; then
+  echo "miku not found at $MIKU_BIN. Run: (cd $MIKU_SRC && ./install.sh)" >&2
+  exit 1
+fi
+
+if [[ -d "$WORKDIR" ]]; then
+  cd "$WORKDIR"
+  echo "Miku cwd: $WORKDIR" >&2
+else
+  echo "WARN: $WORKDIR missing — starting in $MIKU_SRC" >&2
+  cd "$MIKU_SRC"
+fi
+
+exec "$MIKU_BIN" "$@"

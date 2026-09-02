@@ -10,6 +10,7 @@ from pathlib import Path
 _PERSONA_DIR = Path(__file__).resolve().parent
 DEFAULT_POLICY_PATH = _PERSONA_DIR / "policy.md"
 DEFAULT_PERSONA_PATH = _PERSONA_DIR / "miku.md"
+DEFAULT_BANNER_PATH = _PERSONA_DIR / "banner.ans"
 
 _SEPARATOR = "\n\n---\n\n"
 
@@ -52,3 +53,13 @@ def load_system_prompt(
         sections.append(extra_context.strip())
 
     return _SEPARATOR.join(sections)
+
+
+def load_banner(banner_path: Path | str | None = None) -> str:
+    """Reads the truecolor ANSI-art startup banner. Returns "" if missing, same
+    missing-file-is-skipped convention as load_system_prompt above.
+    """
+    path = Path(banner_path) if banner_path is not None else DEFAULT_BANNER_PATH
+    if not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8").rstrip("\n")

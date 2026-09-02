@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MODELS: dict[str, dict[str, Any]] = {
     # "default" is used for general chat/security-research work — an abliterated model so
     # she doesn't refuse authorized malware-dev/CVE/pentest tasks. Swap freely in config.yaml.
-    "default": {"name": "huihui_ai/qwen3-abliterated:30b", "num_ctx": 8192},
+    "default": {"name": "huihui_ai/qwen3-abliterated-64k:30b", "num_ctx": 32768},
     "code": {"name": "qwen3-coder:30b", "num_ctx": 16384},
     "fast": {"name": "huihui_ai/gpt-oss-abliterated:20b", "num_ctx": 8192},
     "embed": {"name": "nomic-embed-text", "num_ctx": 2048},
@@ -101,6 +101,9 @@ class HermesConfig:
     search_backend: str = "ddgs"
     searxng_url: str | None = None
     shell_auto_confirm: bool = False
+    ollama_keep_alive: str | None = None
+    rag_refresh_interval_hours: float = 5.0
+    skills_dir: Path = field(default_factory=lambda: REPO_ROOT / "skills")
     raw: dict[str, Any] = field(default_factory=dict)
 
     def model(self, role: str = "default") -> ModelProfile:
@@ -151,7 +154,15 @@ def load_config() -> HermesConfig:
             num_ctx=models.get("default", ModelProfile(name="")).num_ctx,
         )
 
-    knowledge_dir = Path(raw.get("knowledge_dir", REPO_ROOT / "knowledge")).expanduser()
+    knowledge_dir = Path(
+        raw.get("knowledge_dir", raw.get("workspace_dir", REPO_ROOT / "workspace"))
+    ).expanduser()
+
+    hermes_home = os.environ.get("HERMES_HOME")
+    default_skills_dir = Path(hermes_home) / "skills" if hermes_home else REPO_ROOT / "skills"
+    skills_dir = Path(
+        os.environ.get("HERMES_SKILLS_DIR", raw.get("skills_dir", default_skills_dir))
+    ).expanduser()
 
     projects = [
         ProjectSource(
@@ -165,11 +176,13 @@ def load_config() -> HermesConfig:
 
     return HermesConfig(
         ollama_host=os.environ.get("OLLAMA_HOST", raw.get("ollama_host", "http://127.0.0.1:11434")),
+        ollama_keep_alive=os.environ.get("HERMES_OLLAMA_KEEP_ALIVE", raw.get("ollama_keep_alive")),
         models=models,
         config_dir=config_dir,
         data_dir=data_dir,
         cache_dir=cache_dir,
         knowledge_dir=knowledge_dir,
+        skills_dir=skills_dir,
         projects=projects,
         github_token=os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or raw.get("github_token"),
         nvd_api_key=os.environ.get("NVD_API_KEY") or raw.get("nvd_api_key"),
@@ -178,5 +191,8 @@ def load_config() -> HermesConfig:
         searxng_url=os.environ.get("SEARXNG_URL") or raw.get("searxng_url"),
         shell_auto_confirm=os.environ.get("HERMES_SHELL_AUTO_CONFIRM", "").lower() in ("1", "true", "yes")
         or bool(raw.get("shell", {}).get("auto_confirm", False)),
+        rag_refresh_interval_hours=float(
+            os.environ.get("HERMES_RAG_REFRESH_HOURS", raw.get("rag_refresh_interval_hours", 5))
+        ),
         raw=raw,
     )

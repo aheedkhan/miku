@@ -29,9 +29,14 @@ class ChatResult:
 
 
 class OllamaClient:
-    def __init__(self, host: str, timeout: float = 300.0):
+    def __init__(self, host: str, timeout: float = 300.0, keep_alive: str | None = None):
         self.host = host.rstrip("/")
         self._client = httpx.AsyncClient(base_url=self.host, timeout=timeout)
+        # Ollama unloads an idle model after ~5min by default. None leaves that default
+        # behavior alone (fine for the interactive REPL); a long-lived channel like the
+        # WhatsApp relay sets this to "-1" (never unload) so replies don't eat a ~40s
+        # cold-load on top of inference every time.
+        self.keep_alive = keep_alive
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -59,6 +64,8 @@ class OllamaClient:
         }
         if tools:
             payload["tools"] = tools
+        if self.keep_alive is not None:
+            payload["keep_alive"] = self.keep_alive
         resp = await self._client.post("/api/chat", json=payload)
         resp.raise_for_status()
         return self._parse_chat(resp.json())
@@ -82,6 +89,8 @@ class OllamaClient:
         }
         if tools:
             payload["tools"] = tools
+        if self.keep_alive is not None:
+            payload["keep_alive"] = self.keep_alive
         async with self._client.stream("POST", "/api/chat", json=payload) as resp:
             resp.raise_for_status()
             async for line in resp.aiter_lines():

@@ -13,8 +13,8 @@ ollama_host: "http://127.0.0.1:11434"
 # hardware, so start conservative and raise it once you've benchmarked tokens/sec.
 models:
   default:
-    name: "huihui_ai/qwen3-abliterated:30b"
-    num_ctx: 8192
+    name: "huihui_ai/qwen3-abliterated-64k:30b"
+    num_ctx: 32768
   code:
     name: "qwen3-coder:30b"
     num_ctx: 16384
@@ -25,8 +25,13 @@ models:
     name: "nomic-embed-text"
     num_ctx: 2048
 
-# Where to look for reference docs to RAG-ingest. Defaults to ./knowledge next to this repo.
-# knowledge_dir: "/home/you/Documents/miku/knowledge"
+# Where to look for reference docs to RAG-ingest. Defaults to ./workspace next to this repo
+# (skills refer to this as workspace/). Override with knowledge_dir or workspace_dir.
+# knowledge_dir: "/home/you/Documents/miku/workspace"
+
+# Auto-refresh RAG while Miku is running: CVE delta, malware intel, workspace files, projects.
+# Set to 0 to disable. Also runs immediately on startup if last refresh is older than this.
+rag_refresh_interval_hours: 5
 
 # External codebases/doc trees Miku should track alongside knowledge/ — e.g. a course
 # project or FYP you're coding with her on. Daily-refreshed the same way as CVE deltas

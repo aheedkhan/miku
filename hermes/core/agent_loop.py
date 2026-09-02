@@ -79,10 +79,20 @@ class Agent:
                     self.llm, self.model, self.messages, schemas, num_ctx=self.num_ctx
                 )
             self._last_prompt_eval_count = result.prompt_eval_count
+
+            if not result.message.tool_calls and not result.message.content.strip():
+                # Rare sampling flake: model returned a genuinely empty final answer.
+                # Retry once without appending the empty turn to history before giving up.
+                async with self.gate.acquire_for_model(self.model):
+                    result = await self.strategy.call(
+                        self.llm, self.model, self.messages, schemas, num_ctx=self.num_ctx
+                    )
+                self._last_prompt_eval_count = result.prompt_eval_count
+
             self.messages.append(result.message)
 
             if not result.message.tool_calls:
-                return result.message.content
+                return result.message.content or "(empty response from the model — try rephrasing)"
 
             for call in result.message.tool_calls:
                 self.on_event(StreamEvent("tool_call", {"name": call.name, "arguments": call.arguments}))
@@ -116,10 +126,21 @@ class Agent:
                     self.llm, self.model, self.messages, schemas, num_ctx=self.num_ctx
                 )
             self._last_prompt_eval_count = result.prompt_eval_count
+
+            if not result.message.tool_calls and not result.message.content.strip():
+                # Rare sampling flake: model returned a genuinely empty final answer.
+                # Retry once without appending the empty turn to history before giving up.
+                async with self.gate.acquire_for_model(self.model):
+                    result = await self.strategy.call(
+                        self.llm, self.model, self.messages, schemas, num_ctx=self.num_ctx
+                    )
+                self._last_prompt_eval_count = result.prompt_eval_count
+
             self.messages.append(result.message)
 
             if not result.message.tool_calls:
-                yield StreamEvent("final", {"content": result.message.content})
+                content = result.message.content or "(empty response from the model — try rephrasing)"
+                yield StreamEvent("final", {"content": content, "thinking": result.message.thinking})
                 return
 
             for call in result.message.tool_calls:
