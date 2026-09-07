@@ -14,6 +14,12 @@ workspace/**
 !workspace/malware-authoring/**
 !workspace/os-internals/
 !workspace/os-internals/**
+!workspace/android/
+!workspace/android/**
+!workspace/cves/
+!workspace/cves/**
+!workspace/malware-analysis/
+!workspace/malware-analysis/**
 labs/**/*.exe
 labs/**/*.o
 labs/**/*.dll

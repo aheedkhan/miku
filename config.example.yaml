@@ -29,18 +29,9 @@ models:
 # (skills refer to this as workspace/). Override with knowledge_dir or workspace_dir.
 # knowledge_dir: "/home/you/Documents/miku/workspace"
 
-# Auto-refresh RAG while Miku is running: CVE delta, malware intel, workspace files, projects.
+# Auto-refresh RAG while Miku is running: CVE delta, malware intel, workspace files.
 # Set to 0 to disable. Also runs immediately on startup if last refresh is older than this.
 rag_refresh_interval_hours: 5
-
-# External codebases/doc trees Miku should track alongside knowledge/ — e.g. a course
-# project or FYP you're coding with her on. Daily-refreshed the same way as CVE deltas
-# (mtime+hash diff, re-embed changed files, prune deleted ones); you can also trigger it
-# by hand with /refresh-cve. Retrieval can scope to one project by name.
-# projects:
-#   - name: "fyp-mdm"
-#     path: "/home/you/path/to/fyp-repo"
-#     # include/exclude default to common doc+code extensions if omitted — see hermes/config.py
 
 # Key-free by default. Set to "searxng" + searxng_url if you run your own instance.
 search_backend: "ddgs"

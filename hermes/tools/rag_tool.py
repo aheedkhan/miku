@@ -54,10 +54,10 @@ def build_tools(retriever: "RAGRetriever", ingest: "IngestPipeline") -> list[Too
     query_schema = ToolSchema(
         name="rag_query",
         description=(
-            "Search Miku's local knowledge base (ingested CVEs, malware intel, project code/docs, "
-            "remembered notes, and reference corpora like Win32 API docs, Linux kernel docs, and "
-            "MITRE ATT&CK technique data) for text relevant to `query`. Optionally filter by "
-            "source_type ('knowledge', 'cve', 'malware_intel', 'project', 'reference', 'web_cache')."
+            "Search Miku's local knowledge base (workspace notes, skills playbooks, ingested "
+            "CVEs, malware intel, and reference corpora) for text relevant to `query`. "
+            "Optionally filter by source_type ('knowledge', 'skill', 'cve', 'malware_intel', "
+            "'project', 'reference', 'web_cache')."
         ),
         parameters={
             "type": "object",
@@ -66,7 +66,7 @@ def build_tools(retriever: "RAGRetriever", ingest: "IngestPipeline") -> list[Too
                 "k": {"type": "integer", "description": "Max number of chunks to return. Default 5."},
                 "source_type": {
                     "type": "string",
-                    "enum": ["knowledge", "cve", "malware_intel", "project", "reference", "web_cache"],
+                    "enum": ["knowledge", "skill", "cve", "malware_intel", "project", "reference", "web_cache"],
                     "description": "Optional: restrict results to one source type.",
                 },
             },
@@ -85,7 +85,7 @@ def build_tools(retriever: "RAGRetriever", ingest: "IngestPipeline") -> list[Too
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "The text to remember."},
-                "label": {"type": "string", "description": "A short label identifying this note, e.g. 'fyp-mdm-decision'."},
+                "label": {"type": "string", "description": "A short label identifying this note, e.g. 'lab-decision'."},
             },
             "required": ["text", "label"],
         },

@@ -32,6 +32,38 @@ from hermes.tools.base import Tool, ToolResult, ToolSchema
 OSV_URL = "https://api.osv.dev/v1/vulns/{cve_id}"
 NVD_CVE_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 ANDROID_VIRTUAL_MATCH_STRING = "cpe:2.3:o:google:android"
+PLATFORM_MATCHES: dict[str, str] = {
+    "android": "cpe:2.3:o:google:android",
+    "windows": "cpe:2.3:o:microsoft:windows_11",
+    "linux": "cpe:2.3:o:linux:linux_kernel",
+}
+CISA_KEV_URL = (
+    "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+)
+
+# CWE → lab harness hint (authorized lab only). Used when develop_hints=True.
+_CWE_DEVELOP_HINTS: dict[str, str] = {
+    "CWE-119": "Memory corruption — minimal native trigger (fuzzed input / crafted packet); A/B vuln vs patched build.",
+    "CWE-120": "Classic buffer overflow — craft oversized input to the vulnerable parser; catch crash/ASAN.",
+    "CWE-121": "Stack overflow — local PoC with controlled payload length; verify stack cookies / ASAN.",
+    "CWE-122": "Heap overflow — allocator-aware trigger; record crash site + detection (ETW/ASAN).",
+    "CWE-125": "Out-of-bounds read — probe with crafted length fields; assert info leak or crash.",
+    "CWE-190": "Integer overflow — boundary values around size computations before alloc/copy.",
+    "CWE-22": "Path traversal — crafted ../ paths against file API; assert write/read outside root.",
+    "CWE-78": "OS command injection — inject shell metacharacters into tainted sink; lab shell only.",
+    "CWE-79": "XSS — minimal HTML/JS payload in reflected/stored sink (lab web app).",
+    "CWE-89": "SQL injection — boolean/time payloads against lab DB; never production.",
+    "CWE-94": "Code injection — feed untrusted code into eval/template; assert execution marker.",
+    "CWE-287": "Auth bypass — replay/skip auth checks; assert privileged action without creds.",
+    "CWE-306": "Missing auth — call privileged API/IPC unbound; assert deny vs allow.",
+    "CWE-362": "Race condition — concurrent workers hitting shared resource; assert invariant break.",
+    "CWE-416": "Use-after-free — free-then-reclaim trigger; ASAN/PageHeap on lab build.",
+    "CWE-476": "NULL deref — pass null/optional empty to vulnerable path; assert crash.",
+    "CWE-502": "Insecure deserialization — crafted gadget/object stream; assert RCE marker in lab.",
+    "CWE-787": "OOB write — crafted sizes into write sink; ASAN.",
+    "CWE-862": "Missing authorization — IDOR/horizontal privilege; two lab users.",
+    "CWE-863": "Incorrect authorization — role confusion cases.",
+}
 
 _HTTP_TIMEOUT = 30.0
 _NVD_PAGE_SIZE = 200
@@ -126,8 +158,14 @@ def _nvd_cvss(nvd: dict[str, Any]) -> tuple[str | None, float | None]:
     return None, None
 
 
-def format_cve_summary(cve_id: str, osv: dict[str, Any] | None, nvd: dict[str, Any] | None,
-                        errors: list[str] | None = None) -> str:
+def format_cve_summary(
+    cve_id: str,
+    osv: dict[str, Any] | None,
+    nvd: dict[str, Any] | None,
+    errors: list[str] | None = None,
+    *,
+    develop_hints: bool = False,
+) -> str:
     """Readable prose summary of a merged CVE record, citing which source(s) it came from.
     Shared by the cve_lookup tool and rag/ingest.py's ingest_cve()."""
     if osv is None and nvd is None:
@@ -158,7 +196,9 @@ def format_cve_summary(cve_id: str, osv: dict[str, Any] | None, nvd: dict[str, A
     if summary:
         lines.append(f"\nSummary: {summary}")
     if details and details != summary:
-        lines.append(f"\nDetails (OSV.dev): {details}")
+        # Cap huge OSV details so embeddings stay focused.
+        clipped = details if len(details) <= 1200 else details[:1200] + "…"
+        lines.append(f"\nDetails (OSV.dev): {clipped}")
 
     if osv is not None:
         cvss = _osv_cvss(osv)
@@ -183,6 +223,7 @@ def format_cve_summary(cve_id: str, osv: dict[str, Any] | None, nvd: dict[str, A
             if pkgs:
                 lines.append(f"Affected packages (OSV.dev): {', '.join(pkgs)}")
 
+    weaknesses: list[str] = []
     if nvd is not None:
         severity, score = _nvd_cvss(nvd)
         if severity or score is not None:
@@ -190,19 +231,21 @@ def format_cve_summary(cve_id: str, osv: dict[str, Any] | None, nvd: dict[str, A
         vuln_status = nvd.get("vulnStatus")
         if vuln_status:
             lines.append(f"NVD status: {vuln_status}")
+            if vuln_status in {"Received", "Awaiting Analysis", "Undergoing Analysis"}:
+                lines.append("Open/analysis status: still open in NVD (not fully analyzed).")
         published = nvd.get("published")
         modified = nvd.get("lastModified")
         if published:
             lines.append(f"Published (NVD): {published}")
         if modified:
             lines.append(f"Last modified (NVD): {modified}")
-        weaknesses = []
         for w in nvd.get("weaknesses") or []:
             for d in w.get("description") or []:
                 if d.get("lang") == "en" and d.get("value"):
                     weaknesses.append(d["value"])
         if weaknesses:
-            lines.append(f"Weaknesses (CWE): {', '.join(dict.fromkeys(weaknesses))}")
+            uniq = list(dict.fromkeys(weaknesses))
+            lines.append(f"Weaknesses (CWE): {', '.join(uniq)}")
 
     refs: list[str] = []
     if osv is not None:
@@ -219,22 +262,45 @@ def format_cve_summary(cve_id: str, osv: dict[str, Any] | None, nvd: dict[str, A
         lines.append("\nReferences:")
         lines.extend(f"  - {u}" for u in refs[:8])
 
+    if develop_hints:
+        lines.append("\nDevelop / lab harness:")
+        lines.append(
+            "  Authorized lab only. Pipeline: advisory → root cause → minimal trigger → "
+            "vuln vs patched A/B → detection twin. See workspace/cves/how-to-develop-harness.md "
+            "and skill cve-malware-test."
+        )
+        hinted = False
+        for cwe in dict.fromkeys(weaknesses):
+            hint = _CWE_DEVELOP_HINTS.get(cwe)
+            if hint:
+                lines.append(f"  - {cwe}: {hint}")
+                hinted = True
+        if not hinted:
+            lines.append(
+                "  - Map CWE/root cause to the smallest trigger (IPC, parser input, ioctl, "
+                "WinAPI, Binder). Prefer crash/log/flag success signal over silent harm."
+            )
+
     if errors:
         lines.append(f"\n(Partial data — {'; '.join(errors)})")
 
     return "\n".join(lines)
 
 
-async def list_recent_android_cves(
+async def list_recent_cves_for_match(
     config: HermesConfig,
+    virtual_match: str | None,
     since_iso: str | None = None,
     until_iso: str | None = None,
+    *,
+    keyword: str | None = None,
+    results_cap: int | None = None,
 ) -> list[dict[str, Any]]:
-    """Recently-modified Android-related CVEs from NVD (virtualMatchString wildcard search
-    over cpe:2.3:o:google:android, filtered by lastModStartDate/lastModEndDate). Returns the
-    raw NVD `cve` objects. since_iso/until_iso are NVD's expected `%Y-%m-%dT%H:%M:%S.000` UTC
-    strings (no "Z" suffix — that's what the live API accepts); when omitted, defaults to "the
-    last 7 days up to now"."""
+    """Recently-modified CVEs from NVD.
+
+    Provide `virtual_match` (CPE virtualMatchString) and/or `keyword`. Returns raw NVD
+    `cve` objects. Dates use NVD's `%Y-%m-%dT%H:%M:%S.000` UTC form (no Z).
+    """
     now = datetime.now(timezone.utc)
     if until_iso is None:
         until_iso = now.strftime("%Y-%m-%dT%H:%M:%S.000")
@@ -244,29 +310,61 @@ async def list_recent_android_cves(
     results: list[dict[str, Any]] = []
     start_index = 0
     headers = _nvd_headers(config)
+    cap = results_cap or (_NVD_PAGE_SIZE * _NVD_MAX_PAGES)
 
     async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
         for _ in range(_NVD_MAX_PAGES):
-            params = {
-                "virtualMatchString": ANDROID_VIRTUAL_MATCH_STRING,
+            params: dict[str, Any] = {
                 "lastModStartDate": since_iso,
                 "lastModEndDate": until_iso,
                 "resultsPerPage": _NVD_PAGE_SIZE,
                 "startIndex": start_index,
             }
+            if virtual_match:
+                params["virtualMatchString"] = virtual_match
+            if keyword:
+                params["keywordSearch"] = keyword
             resp = await _get_with_retry(client, NVD_CVE_URL, params=params, headers=headers)
             resp.raise_for_status()
             data = resp.json()
             vulns = data.get("vulnerabilities") or []
             results.extend(v["cve"] for v in vulns if "cve" in v)
 
+            if len(results) >= cap:
+                return results[:cap]
+
             total = data.get("totalResults", len(results))
             start_index += len(vulns)
             if start_index >= total or not vulns:
                 break
-            await asyncio.sleep(0.6)  # be polite to NVD's rate limiter across pages
+            await asyncio.sleep(0.6)
 
-    return results
+    return results[:cap]
+
+
+async def list_recent_android_cves(
+    config: HermesConfig,
+    since_iso: str | None = None,
+    until_iso: str | None = None,
+) -> list[dict[str, Any]]:
+    """Recently-modified Android-related CVEs from NVD (compat wrapper)."""
+    return await list_recent_cves_for_match(
+        config,
+        ANDROID_VIRTUAL_MATCH_STRING,
+        since_iso=since_iso,
+        until_iso=until_iso,
+    )
+
+
+async def list_cisa_kev(*, limit: int = 100) -> list[dict[str, Any]]:
+    """CISA Known Exploited Vulnerabilities catalog (newest first)."""
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT, follow_redirects=True) as client:
+        resp = await _get_with_retry(client, CISA_KEV_URL)
+    resp.raise_for_status()
+    data = resp.json()
+    vulns = list(data.get("vulnerabilities") or [])
+    vulns.sort(key=lambda v: v.get("dateAdded") or "", reverse=True)
+    return vulns[:limit]
 
 
 def _format_android_cve_list(cves: list[dict[str, Any]], since_iso: str, until_iso: str) -> str:
@@ -290,48 +388,88 @@ def build_tools(config: HermesConfig) -> list[Tool]:
     async def cve_lookup(
         cve_id: str | None = None,
         android_recent_days: int | None = None,
+        recent_days: int | None = None,
+        platform: str | None = None,
+        include_kev: bool = False,
     ) -> ToolResult:
-        if not cve_id and not android_recent_days:
+        if not cve_id and not android_recent_days and not recent_days and not include_kev:
             return ToolResult.failure(
                 "missing_argument",
-                "cve_lookup needs either cve_id (e.g. 'CVE-2024-3094') or android_recent_days "
-                "(e.g. 7) — neither was given.",
+                "cve_lookup needs cve_id, recent_days (+ optional platform), "
+                "android_recent_days, or include_kev=true.",
             )
 
         if cve_id:
             try:
                 merged = await fetch_cve(cve_id, config)
-            except Exception as e:  # noqa: BLE001 - surface as a tool failure, never crash the loop
+            except Exception as e:  # noqa: BLE001
                 return ToolResult.failure(f"cve_lookup_error: {type(e).__name__}: {e}")
             summary = format_cve_summary(
-                merged["cve_id"], merged["osv"], merged["nvd"], merged["errors"]
+                merged["cve_id"],
+                merged["osv"],
+                merged["nvd"],
+                merged["errors"],
+                develop_hints=True,
             )
             if merged["osv"] is None and merged["nvd"] is None:
                 return ToolResult.failure("not_found", summary)
             return ToolResult.success(summary)
 
-        try:
-            days = int(android_recent_days)  # type: ignore[arg-type]
-        except (TypeError, ValueError):
-            return ToolResult.failure("bad_argument", "android_recent_days must be an integer number of days.")
+        if include_kev and not recent_days and not android_recent_days:
+            try:
+                kev = await list_cisa_kev(limit=40)
+            except httpx.HTTPError as e:
+                return ToolResult.failure(f"kev_error: {type(e).__name__}: {e}")
+            lines = [f"CISA KEV — {len(kev)} newest entries:"]
+            for item in kev:
+                lines.append(
+                    f"- {item.get('cveID')} | {item.get('vendorProject')}/{item.get('product')} | "
+                    f"added {item.get('dateAdded')}: {item.get('vulnerabilityName')}"
+                )
+            return ToolResult.success("\n".join(lines))
+
+        days = int(android_recent_days or recent_days or 0)
         if days <= 0:
-            return ToolResult.failure("bad_argument", "android_recent_days must be a positive integer.")
+            return ToolResult.failure("bad_argument", "days must be a positive integer.")
 
         now = datetime.now(timezone.utc)
         since_iso = (now - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S.000")
         until_iso = now.strftime("%Y-%m-%dT%H:%M:%S.000")
+
+        from hermes.tools.cve_tool import PLATFORM_MATCHES
+
+        match = ANDROID_VIRTUAL_MATCH_STRING
+        label = "Android"
+        if platform:
+            key = platform.strip().lower()
+            if key not in PLATFORM_MATCHES:
+                return ToolResult.failure(
+                    "bad_argument",
+                    f"platform must be one of: {', '.join(PLATFORM_MATCHES)}",
+                )
+            match = PLATFORM_MATCHES[key]
+            label = key
+
         try:
-            cves = await list_recent_android_cves(config, since_iso=since_iso, until_iso=until_iso)
+            cves = await list_recent_cves_for_match(
+                config, match, since_iso=since_iso, until_iso=until_iso
+            )
         except httpx.HTTPError as e:
             return ToolResult.failure(f"nvd_error: {type(e).__name__}: {e}")
-        return ToolResult.success(_format_android_cve_list(cves, since_iso, until_iso))
+
+        # Reuse Android formatter shape with a dynamic label.
+        text = _format_android_cve_list(cves, since_iso, until_iso).replace(
+            "Android-related", f"{label}-related"
+        )
+        return ToolResult.success(text)
 
     schema = ToolSchema(
         name="cve_lookup",
         description=(
-            "Look up a specific CVE by id (queries OSV.dev + NVD, merges into one summary), "
-            "OR list recently-modified Android-related CVEs from NVD over the last N days. "
-            "Pass exactly one of cve_id / android_recent_days."
+            "Look up a CVE by id (OSV.dev + NVD, with lab develop/harness hints), "
+            "list recently-modified CVEs for platform android|windows|linux, "
+            "or list newest CISA KEV (known exploited) entries. "
+            "Use recent_days+platform for feeds; include_kev=true for KEV."
         ),
         parameters={
             "type": "object",
@@ -340,9 +478,22 @@ def build_tools(config: HermesConfig) -> list[Tool]:
                     "type": "string",
                     "description": "A CVE id to look up, e.g. 'CVE-2024-3094'.",
                 },
+                "recent_days": {
+                    "type": "integer",
+                    "description": "List CVEs NVD modified in the last N days (use with platform).",
+                },
+                "platform": {
+                    "type": "string",
+                    "enum": ["android", "windows", "linux"],
+                    "description": "Platform filter for recent_days (default android).",
+                },
                 "android_recent_days": {
                     "type": "integer",
-                    "description": "Instead of cve_id: list Android CVEs NVD modified in the last N days.",
+                    "description": "Deprecated alias for recent_days with platform=android.",
+                },
+                "include_kev": {
+                    "type": "boolean",
+                    "description": "If true (and no cve_id), list newest CISA KEV entries.",
                 },
             },
         },

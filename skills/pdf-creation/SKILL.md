@@ -13,7 +13,7 @@ Turn a finished markdown report into a clean PDF under `workspace/reports/pdf/`.
 ## When to use
 - "Make a PDF" / "export this report"
 - After `report-generation` saves a `.md`
-- FYP / lab / pentest deliverables that need a shareable file
+- Lab / pentest deliverables that need a shareable file
 
 ## Preferred toolchain (pick first available)
 1. **pandoc** + engine (`pdflatex`, `xelatex`, or `wkhtmltopdf` / `weasyprint` if configured)

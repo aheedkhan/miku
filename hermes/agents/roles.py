@@ -14,47 +14,43 @@ from __future__ import annotations
 ROLE_PRESETS: dict[str, dict] = {
     "researcher": {
         "model_role": "fast",
-        "tool_names": ["web_search", "cve_lookup", "malware_intel", "rag_query", "rag_remember"],
+        "tool_names": [
+            "web_search", "web_fetch", "github", "cve_lookup",
+            "malware_intel", "rag_query", "rag_remember", "use_skill",
+        ],
         "system_prompt_suffix": (
-            "You are operating as a RESEARCH sub-agent. Your job is read-only information "
-            "gathering: web search, CVE/vulnerability lookups, malware intelligence lookups, "
-            "and querying/recording notes in the RAG knowledge store. You have no filesystem, "
-            "shell, or git access and cannot edit anything or run commands — if the task asks "
-            "for that, explain what you found instead and note that execution is outside your "
-            "scope. Be concise, and cite sources (URLs, CVE IDs, hashes) whenever you have them."
+            "You are a RESEARCH sub-agent. Gather with rag_query, web_search, web_fetch, "
+            "github explore (search_repos/code_search/contents/file_get), and cve_lookup. "
+            "No shell/fs writes. Cite URLs and owner/repo@path. Return a tight brief."
         ),
     },
     "reviewer": {
         "model_role": "code",
-        "tool_names": ["read_file", "list_dir", "grep", "git"],
+        "tool_names": ["read_file", "list_dir", "grep", "git", "github", "rag_query"],
         "system_prompt_suffix": (
-            "You are operating as a CODE REVIEW sub-agent. Read and inspect the codebase using "
-            "read_file, list_dir, grep, and git (e.g. `git diff`, `git log`, `git show`) to "
-            "understand what changed and why. You cannot edit files or run arbitrary shell "
-            "commands — report findings (bugs, risks, style issues, suggestions) as text; you "
-            "do not apply fixes yourself. Be specific: cite file paths and line numbers."
+            "You are a CODE REVIEW sub-agent. Inspect with read_file/list_dir/grep/git; "
+            "optionally github file_get for upstream prior art. Do not edit or shell. "
+            "Cite file paths and line numbers; report risks specifically."
         ),
     },
     "pentest_runner": {
         "model_role": "default",
-        "tool_names": ["shell_exec", "read_file", "grep", "cve_lookup", "malware_intel", "android"],
+        "tool_names": [
+            "shell_exec", "read_file", "grep", "cve_lookup", "malware_intel",
+            "android", "web_fetch", "github", "rag_query",
+        ],
         "system_prompt_suffix": (
-            "You are operating as a PENTEST/EXECUTION sub-agent — the one role trusted to "
-            "actually run commands (shell_exec) and Android tooling (android) against systems "
-            "the user has confirmed they are authorized to test. Use read_file/grep to inspect "
-            "results, and cve_lookup/malware_intel to cross-reference findings. Work "
-            "methodically, run one meaningful step at a time, and report exactly what you ran "
-            "and what came back — don't summarize away command output the user will need."
+            "You are a PENTEST/EXECUTION sub-agent on authorized targets only. "
+            "Run shell_exec/android carefully; cross-check with cve_lookup/github/web_fetch. "
+            "Report exact commands and output — don't over-summarize."
         ),
     },
     "general": {
         "model_role": "default",
         "tool_names": None,  # sentinel: None means "use the full, unrestricted tool registry"
         "system_prompt_suffix": (
-            "You are operating as a general-purpose sub-agent with the full tool set available. "
-            "Complete the delegated task directly and return a clear, self-contained final "
-            "answer — the parent agent will only see your final message, not your intermediate "
-            "steps."
+            "You are a general-purpose sub-agent with the full tool set. "
+            "Complete the task and return a clear final answer — parent sees only that."
         ),
     },
 }

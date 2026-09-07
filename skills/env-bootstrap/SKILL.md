@@ -1,15 +1,25 @@
 ---
 name: env-bootstrap
 description: >-
-  Bootstrap and repair the Miku/Hermes environment — install-wsl.sh / install.sh,
-  Ollama, .env, SearXNG, Qubes split, model pulls. Use on new machines, broken
-  endpoints, "miku won't start," or migrating to Qubes/WSL.
+  Bootstrap and repair the Miku/Hermes environment — install-wsl.sh, Ollama, and
+  Windows 11 lab VM A→Z setup. Use on new machines, "miku won't start," or
+  "setup Windows lab / Hyper-V from scratch."
 ---
 
 # Env bootstrap
 
 ## Goal
 A working `miku` shell talking to Ollama (local or Qubes VM) with this `HERMES_HOME`.
+
+## Windows 11 lab VM (A→Z)
+When the user needs a **full Windows lab from zero** (Hyper-V/VMware/VBox, ISO, snapshot,
+firewall, copy `.exe`, Defender tools):
+
+1. Spoon-feed from **`docs/windows11-lab-setup-atoz.md`** (one letter A→T per turn)
+2. Index card: `workspace/references/windows11-lab-setup.md`
+3. Skills: `teaching-lab`, `wsl-windows-exe`
+
+User trigger phrases: “setup Windows lab”, “A to Z”, “spoon-feed Windows”, “Hyper-V from scratch”.
 
 ## Happy path (new WSL Debian/Ubuntu)
 ```bash

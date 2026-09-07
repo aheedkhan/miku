@@ -1,6 +1,6 @@
 # Curated reference links — malware dev, CVEs, Windows 11, Defender/EDR
 
-> **Scope:** Authorized lab / FYP / malware-analysis research only. Use isolated VMs,
+> **Scope:** Authorized lab / malware-analysis research only. Use isolated VMs,
 > never against third-party systems. Miku indexes this file into RAG — search with
 > `rag_query` or `hermes workspace search "defender amsi"`.
 

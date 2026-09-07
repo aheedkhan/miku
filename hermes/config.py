@@ -76,9 +76,9 @@ class ModelProfile:
 
 @dataclass
 class ProjectSource:
-    """An external codebase/doc tree Miku should track alongside her own knowledge/ folder —
-    e.g. your FYP repo. Daily-refreshed the same way as CVE deltas: mtime+hash diff, re-embed
-    changed files, prune deleted ones. Retrieval can filter to one project by `name`."""
+    """Optional external codebase/doc tree to track alongside knowledge/ (legacy config).
+    Daily-refreshed like CVE deltas: mtime+hash diff, re-embed changed files, prune deleted.
+    Retrieval can filter to one entry by `name`."""
 
     name: str
     path: Path

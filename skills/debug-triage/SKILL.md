@@ -1,40 +1,55 @@
 ---
 name: debug-triage
 description: >-
-  Systematic debugging — reproduce, bisect, logs, strace/ltrace, gdb/lldb,
-  logcat, journalctl, core dumps. Use when builds fail, crashes, hangs, wrong
-  behavior, or "it worked yesterday."
+  Systematic debugging — reproduce, classify compile vs runtime, logs, strace,
+  then debugger. Use for build failures, crashes, hangs, wrong behavior.
 ---
 
 # Debug triage
 
 ## Goal
-Find the first wrong assumption fast; leave a short trail so future sessions don't rediscover it.
+Find the **first wrong assumption** fast. Leave a trail so the next session doesn't rediscover it.
 
-## Workflow (always)
-1. **Reproduce** — minimal command, exact error, exit code
-2. **Locate** — which layer? build | runtime | network | permission | data
-3. **Instrument** — one tool at a time (log → strace → debugger)
-4. **Hypothesis** — one sentence; test it; keep or discard
-5. **Fix or document** — patch + note under `workspace/` or FYP `PROGRESS` if relevant
+## Pipeline
+```
+reproduce → classify layer → cheap instruments → debugger if needed → fix → re-test
+```
+
+1. **Reproduce** — exact command, cwd, env, exit code, full error text
+2. **Classify**
+   - **build** → `lab-build` (first compiler error only)
+   - **test fail** → read assertion; keep test red until fixed (`test-harness`)
+   - **crash / SIGSEGV / access violation** → ASAN rebuild or `debugger`
+   - **hang** → `strace -f` / thread dump / `debugger` + `thread apply all bt`
+   - **wrong result** — bisect input; conditional breakpoints
+3. **One instrument at a time** — log → strace → debugger (don't stack everything)
+4. **Hypothesis** — one sentence; test; keep or discard
+5. **Fix + re-run the same repro/test**
+6. **Note** under `workspace/` (command + excerpt + root cause)
 
 ## Tool map
 | Symptom | First tools |
 |---------|-------------|
-| Compile error | full command + first error only (ignore cascade) |
-| Crash / SIGSEGV | `coredumpctl`, gdb/`lldb`, ASAN/UBSAN rebuild |
-| Hang | `strace -f`, `perf top`, thread dumps |
-| Android process | `adb logcat`, `dumpsys`, binder logs |
-| Service / host | `journalctl -u`, `ss -lntp`, curl health |
-| "Works on my machine" | env diff, container vs host, cwd, SELinux/`getenforce` |
+| Compile error | full cmd + **first** error; `make VERBOSE=1` |
+| Link error | undefined ref → which `.o`/`-l` missing |
+| Crash Linux | ASAN build **or** `gdb`/`lldb` + `bt full` (skill `debugger`) |
+| Crash Windows | WinDbg/`!analyze -v` on lab VM |
+| Hang | `strace -f`, `perf top`, `thread apply all bt` |
+| Android Java | `adb logcat`, jdb / Studio |
+| Android native | tombstone + lldb (skill `debugger`) |
+| Service/host | `journalctl -u`, `ss -lntp` |
+| Env drift | container vs host, `cwd`, `getenforce` |
 
-## Rules
-- Prefer **evidence** over vibes
-- Don't restart the world before reading the error
-- For FYP: never treat Cuttlefish results as Pixel GOV-023 proof
-- Save the failing command + key log excerpt in the lab note
+## Evidence over vibes
+- Paste the failing command and the first error block into notes
+- Don't "restart the world" before reading the error
+- After fix: same test must go green (or mark `[UNVERIFIED]`)
 
 ## Hand-offs
-- Build system confusion → `lab-build` / `fyp-aosp-build`
-- Writeup → `report-generation`
-- Unknown malware crash → `malware-analysis` / `android-malware-analysis`
+| Need | Skill |
+|------|-------|
+| Compile flags / mingw / cmake | `lab-build` |
+| Breakpoints / cores / WinDbg | `debugger` |
+| New failing check | `test-harness` |
+| Malware sample crash | `malware-analysis` (isolated VM) |
+| Writeup | `report-generation` |

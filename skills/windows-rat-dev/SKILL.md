@@ -28,10 +28,11 @@ third-party deployment or "FUD for real targets."
 - Extending or studying open-source C2 (Sliver, Havoc, Metasploit) vs **custom minimal RAT**
 
 ## Before coding — read these
+0. **Lab not ready?** Spoon-feed `docs/windows11-lab-setup-atoz.md` (A→Z) via `teaching-lab` / `env-bootstrap`
 1. RAG: `workspace/references/curated-links.md`
 2. RAG: `workspace/os-internals/windows/defender-win11-lab.md`
 3. RAG: `workspace/malware-authoring/rat/architecture.md`
-4. Skills: `malware-authoring`, `windows-api`, `malware-analysis`
+4. Skills: `malware-authoring`, `windows-api`, `malware-analysis`, `wsl-windows-exe`, `lab-iterate`
 
 ## Build strategy (pick explicitly)
 
@@ -110,15 +111,17 @@ Prefer **C/C++** for implant body unless user asks otherwise. Python for **lab C
 ## Method (mandatory sequence)
 
 1. **Scope doc** — `workspace/malware-authoring/rat/projects/<name>.md` using template below
-2. **Lab layout** — create under `labs/rat/win11/<name>/` (gitignored binaries)
-3. **Minimal beacon** — connect → check in → sleep → exit (no evasion yet)
-4. **One module at a time** — shell, upload/download, ps, inject…
-5. **C2 server** — lab-only listener on LAN IP; document wire protocol in scope doc
-6. **Defender baseline** — run on **default Win11 VM**; capture alerts + Event IDs
-7. **Evasion phase** (optional, separate commit) — one technique per iteration
-8. **Detection twin** — Sigma/YARA/ETW for *each* iteration
-9. **Analyst pass** — skill `malware-analysis` on your own binary; hash in notes only
-10. **RAG** — `rag_remember` key decisions; `hermes workspace index`
+2. **Success criteria** — include whether Defender bypass is in scope (skill `lab-iterate`)
+3. **Lab layout** — create under `labs/rat/win11/<name>/` (gitignored binaries)
+4. **Build on WSL** — mingw PE via `wsl-windows-exe` / `lab-build`
+5. **Minimal beacon** — connect → check in → sleep → exit (no evasion yet)
+6. **Iterate** — error→debug→fix until checkin/modules green (`lab-iterate`)
+7. **One module at a time** — shell, upload/download, ps, inject…
+8. **C2 server** — lab-only listener; document wire protocol in scope doc
+9. **Defender baseline** — snapshotted Win11 VM; capture alerts + Event IDs
+10. **Evasion phase** (only if criteria say so) — one technique per `lab-iterate` loop + detection twin
+11. **Analyst pass** — skill `malware-analysis` on your own binary; hash in notes only
+12. **RAG** — `rag_remember` key decisions; `hermes workspace index`
 
 ## C2 protocol (lab minimal)
 
@@ -217,7 +220,7 @@ When extending OSS: **do not** commit framework secrets/keys; document module be
 | Analyst pass | `malware-analysis` |
 | CVE-driven initial access | `cve-malware-test` |
 | Intel on real RAT families | `malware-intel` |
-| Lab VM setup | `lab-build`, `env-bootstrap` (isolated Win11 guest; no KVM docs in-repo) |
+| Lab VM setup | `lab-build`, `env-bootstrap`, **`wsl-windows-exe`**, **`lab-iterate`** |
 
 ## Never
 - Ship turnkey "ready to infect" packages without isolation + detection docs

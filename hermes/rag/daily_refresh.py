@@ -16,9 +16,9 @@ from datetime import datetime, timedelta, timezone
 
 from hermes.config import HermesConfig
 from hermes.core.llm_client import OllamaClient
+from hermes.rag.cve_bootstrap import ingest_open_cves
 from hermes.rag.fetch_references import ingest_references
 from hermes.rag.ingest import IngestPipeline
-from hermes.tools.cve_tool import list_recent_android_cves
 from hermes.tools.malware_bazaar_tool import mb_get_recent
 
 _STATE_KEY = "rag_refresh_last_run"
@@ -79,25 +79,46 @@ async def run_daily_refresh(
 
         since_iso = since.strftime("%Y-%m-%dT%H:%M:%S.000")
         until_iso = now.strftime("%Y-%m-%dT%H:%M:%S.000")
+        del since_iso, until_iso  # window expressed as `days` for ingest_open_cves
 
         summary: dict[str, int] = {
             "android_cves_found": 0,
             "android_cve_chunks_added": 0,
+            "open_cves_seen": 0,
+            "open_cve_chunks_added": 0,
+            "kev_seen": 0,
+            "kev_chunks_added": 0,
+            "related_seen": 0,
+            "related_chunks_added": 0,
             "malware_samples_found": 0,
             "malware_chunks_added": 0,
             "project_chunks_added": 0,
             "knowledge_chunks_added": 0,
+            "skill_chunks_added": 0,
             "reference_chunks_added": 0,
         }
 
-        # (a) Android CVE delta from NVD.
-        cves = await list_recent_android_cves(config, since_iso=since_iso, until_iso=until_iso)
-        summary["android_cves_found"] = len(cves)
-        for cve in cves:
-            cve_id = cve.get("id")
-            if not cve_id:
-                continue
-            summary["android_cve_chunks_added"] += await retriever_ingest.ingest_cve(cve, cve_id)
+        # (a) Multi-platform open CVEs + CISA KEV + related-by-CWE.
+        # Window = since last refresh (or 7d). Caps keep keyless NVD usable.
+        days = max(1, (now - since).days + 1)
+        open_summary = await ingest_open_cves(
+            config,
+            retriever_ingest,
+            days=min(days, 14),
+            include_kev=True,
+            include_related=True,
+            max_per_platform=25,
+            kev_max=40,
+        )
+        summary["open_cves_seen"] = open_summary.get("cves_seen", 0)
+        summary["open_cve_chunks_added"] = open_summary.get("cve_chunks_added", 0)
+        summary["kev_seen"] = open_summary.get("kev_seen", 0)
+        summary["kev_chunks_added"] = open_summary.get("kev_chunks_added", 0)
+        summary["related_seen"] = open_summary.get("related_seen", 0)
+        summary["related_chunks_added"] = open_summary.get("related_chunks_added", 0)
+        # Keep legacy android counters populated for older status UIs.
+        summary["android_cves_found"] = summary["open_cves_seen"]
+        summary["android_cve_chunks_added"] = summary["open_cve_chunks_added"]
 
         # (b) MalwareBazaar recent samples across platforms (Android + Windows PE/DLL + Linux
         # ELF) — metadata only, skipped cleanly (not an error) when no Auth-Key is configured.
@@ -118,6 +139,7 @@ async def run_daily_refresh(
         for project in config.projects:
             summary["project_chunks_added"] += await retriever_ingest.ingest_project(project)
         summary["knowledge_chunks_added"] += await retriever_ingest.ingest_knowledge_dir(config)
+        summary["skill_chunks_added"] = await retriever_ingest.ingest_skills_dir(config)
 
         # (d) Reference corpora (Win32 API docs, Linux kernel docs, MITRE ATT&CK) — only
         # ingests what's already been fetched via `python -m hermes.rag.fetch_references`;

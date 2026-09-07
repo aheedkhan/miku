@@ -44,6 +44,7 @@ from hermes.tools import (
     shell_tool,
     skill_tool,
     subagent_tool,
+    web_fetch_tool,
     web_search_tool,
 )
 from hermes.tools.registry import ToolRegistry
@@ -345,7 +346,7 @@ def _build_tool_registry(
     registry = ToolRegistry()
     for module in (
         fs_tools, shell_tool, git_tool, github_tool,
-        web_search_tool, cve_tool, malware_bazaar_tool, android_tool,
+        web_search_tool, web_fetch_tool, cve_tool, malware_bazaar_tool, android_tool,
     ):
         registry.register_all(module.build_tools(config))
     registry.register_all(rag_tool.build_tools(retriever, ingest))
@@ -798,18 +799,20 @@ async def _workspace_cli(args: list[str]) -> None:
         if sub == "index":
             config.knowledge_dir.mkdir(parents=True, exist_ok=True)
             total = await ingest.ingest_knowledge_dir(config)
+            skills_n = await ingest.ingest_skills_dir(config)
+            total += skills_n
             for project in config.projects:
                 total += await ingest.ingest_project(project)
-            print(f"Indexed {total} new chunk(s) from {config.knowledge_dir}")
+            print(f"Indexed {total} new/updated chunk(s)")
+            print(f"  workspace: {config.knowledge_dir}")
+            print(f"  skills:    {config.skills_dir} ({skills_n} chunk(s) this run)")
+            print(f"  store:     {store.active_count()} active chunk(s) total")
         elif sub == "status":
-            rows = store._conn.execute(
-                "SELECT source_type, COUNT(*) FROM chunks WHERE deleted = 0 GROUP BY source_type ORDER BY source_type"
-            ).fetchall()
-            total = store._conn.execute(
-                "SELECT COUNT(*) FROM chunks WHERE deleted = 0"
-            ).fetchone()[0]
+            rows = store.stats_by_source_type()
+            total = store.active_count()
             print(f"RAG store: {config.rag_dir}")
             print(f"Workspace: {config.knowledge_dir}")
+            print(f"Skills:    {config.skills_dir}")
             print(f"Total chunks: {total}")
             for source_type, count in rows:
                 print(f"  {source_type}: {count}")
@@ -824,15 +827,45 @@ async def _workspace_cli(args: list[str]) -> None:
                 return
             chunks = await retriever.query(query, k=8)
             if not chunks:
-                print("No matching knowledge found.")
+                print("No matching knowledge found (below relevance floor or empty store).")
                 return
+            for sc in chunks:
+                print(f"— {sc.score:.3f}  {sc.chunk.source}")
+            print()
             print(retriever.format_for_prompt(chunks, max_chars=8000))
         elif sub == "refresh":
             summary = await run_daily_refresh(config, llm, ingest)
             for key, value in summary.items():
                 print(f"{key}: {value}")
+        elif sub == "cves":
+            # hermes workspace cves [days]
+            days = 14
+            if len(args) >= 2:
+                try:
+                    days = max(1, int(args[1]))
+                except ValueError:
+                    print("Usage: hermes workspace cves [days]")
+                    return
+            print(
+                f"Fetching open CVEs (android/windows/linux, last {days}d) + CISA KEV "
+                f"+ related-by-CWE — this talks to NVD/OSV/CISA…"
+            )
+            from hermes.rag.cve_bootstrap import ingest_open_cves
+
+            summary = await ingest_open_cves(
+                config,
+                ingest,
+                days=days,
+                include_kev=True,
+                include_related=True,
+                max_per_platform=30,
+                kev_max=60,
+            )
+            for key, value in summary.items():
+                print(f"{key}: {value}")
+            print(f"Active chunks now: {store.active_count()}")
         else:
-            print("Usage: hermes workspace {index|status|search|refresh}")
+            print("Usage: hermes workspace {index|status|search|refresh|cves}")
     finally:
         store.close()
         await llm.aclose()

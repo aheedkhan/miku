@@ -5,13 +5,19 @@ blown out by RAG context."""
 from __future__ import annotations
 
 from hermes.rag.embeddings import EmbeddingClient
-from hermes.rag.store import ScoredChunk, VectorStore
+from hermes.rag.store import DEFAULT_MIN_SCORE, ScoredChunk, VectorStore
 
 
 class RAGRetriever:
-    def __init__(self, embedder: EmbeddingClient, store: VectorStore):
+    def __init__(
+        self,
+        embedder: EmbeddingClient,
+        store: VectorStore,
+        min_score: float = DEFAULT_MIN_SCORE,
+    ):
         self.embedder = embedder
         self.store = store
+        self.min_score = min_score
 
     async def query(
         self,
@@ -19,14 +25,19 @@ class RAGRetriever:
         k: int = 5,
         source_type: str | None = None,
         source_prefix: str | None = None,
+        min_score: float | None = None,
     ) -> list[ScoredChunk]:
         query_embedding = await self.embedder.embed_query(text)
-        return self.store.search(query_embedding, k=k, source_type=source_type, source_prefix=source_prefix)
+        return self.store.search(
+            query_embedding,
+            k=k,
+            source_type=source_type,
+            source_prefix=source_prefix,
+            min_score=self.min_score if min_score is None else min_score,
+        )
 
     def format_for_prompt(self, chunks: list[ScoredChunk], max_chars: int = 3000) -> str:
-        """Dedupe near-identical chunks (by normalized text), cite each with its source, and
-        truncate to a character budget — cheapest possible guard against blowing a small
-        model's context on RAG content. Returns "" if given no chunks."""
+        """Dedupe near-identical chunks, cite each with its source, truncate to a budget."""
         if not chunks:
             return ""
 
@@ -43,13 +54,9 @@ class RAGRetriever:
         used = 0
         for sc in deduped:
             block = f"[source: {sc.chunk.source} | score: {sc.score:.3f}]\n{sc.chunk.text.strip()}"
-            # Budget check happens before appending — a chunk that would blow the budget is
-            # simply omitted rather than truncated mid-sentence, so every included block stays
-            # coherent for the model to cite.
             sep_len = 2 if parts else 0
             if used + sep_len + len(block) > max_chars:
                 if not parts:
-                    # Nothing fit at all yet — still give the model *something*, hard-truncated.
                     parts.append(block[: max(0, max_chars)])
                 break
             parts.append(block)

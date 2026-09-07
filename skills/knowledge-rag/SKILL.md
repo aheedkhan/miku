@@ -26,10 +26,16 @@ Turn today's work into next month's retrieval — markdown in `workspace/`, inde
 
 ## Commands
 ```bash
-hermes workspace index
+hermes workspace index          # workspace notes + skills playbooks
+hermes workspace cves [days]    # pull open CVEs (android/windows/linux) + KEV + related
 hermes workspace status
-hermes workspace search "your query"
+hermes workspace search "CVE-2024 buffer overflow"
+hermes workspace refresh        # CVEs + malware intel + re-index notes
 ```
+
+Relevance floor (~0.58 cosine) drops junk matches. Re-index after editing notes — unchanged files are skipped; changed files replace their chunks.
+
+CVE cards in RAG include **develop/harness hints** (CWE → trigger style). See `workspace/cves/how-to-develop-harness.md`.
 
 ## Reference links (start here)
 - **Master index:** `workspace/references/curated-links.md` — CVE databases, malware dev/analysis,

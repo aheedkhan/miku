@@ -20,6 +20,12 @@ source .venv/bin/activate && miku
 
 `SKIP_MODELS=1` skips the large `ollama pull`s; `SKIP_ANDROID=1` skips Android RE helpers.
 
+**WSL → Windows `.exe` lab (RAT / Defender):**  
+- Daily: [`docs/wsl-windows-lab-guide.md`](docs/wsl-windows-lab-guide.md)  
+- **Full Win11 setup A→Z:** [`docs/windows11-lab-setup-atoz.md`](docs/windows11-lab-setup-atoz.md)  
+
+Say `spoon-feed Windows lab` for step-by-step VM setup.
+
 **Python-only** (system packages + Ollama already present):
 
 ```bash
@@ -49,10 +55,10 @@ this install path (WSL-friendly).
 - **Sub-agent spawning** — the same agent loop spins up scoped, restricted-toolset sub-agents
   for focused sub-tasks; only their final answer re-enters your context, not their internal
   turns.
-- **Daily CVE + project refresh** — a background job that diffs and re-embeds new Android CVEs,
-  cross-platform MalwareBazaar sample intel (Android/Windows/Linux), and any external project
-  repos you're tracking (see `projects:` below), so retrieval stays current without manual
-  re-indexing. Runs from inside the REPL (`/refresh-cve`) or standalone via cron/systemd
+- **Daily CVE refresh** — a background job that diffs and re-embeds new Android CVEs,
+  cross-platform MalwareBazaar sample intel (Android/Windows/Linux), and workspace notes,
+  so retrieval stays current without manual re-indexing. Runs from inside the REPL
+  (`/refresh-cve`) or standalone via cron/systemd
   (`python -m hermes.rag.daily_refresh` — see [`docs/android-workflow.md`](docs/android-workflow.md)).
 - **Windows API / Linux kernel / MITRE ATT&CK reference corpora** — a one-time opt-in fetch
   (`/fetch-references` in the REPL, or `python -m hermes.rag.fetch_references`) pulls Microsoft's
@@ -71,9 +77,6 @@ you'll want to touch:
 
 - **Model choice** — the `models:` map assigns an Ollama model + context window per role
   (`default`, `code`, `fast`, `embed`). Swap in whatever you've pulled with `ollama pull`.
-- **`projects:`** — a list of other repos you want Miku tracking alongside `knowledge/`, e.g. a
-  course project or FYP you're building together. Daily-refreshed and re-embedded the same way
-  as CVE deltas.
 - **`ollama_host`** — override for a Qubes-style setup where Ollama runs in a separate VM; see
   [`docs/qubes-deployment.md`](docs/qubes-deployment.md).
 

@@ -17,10 +17,9 @@ Keep the lab powerful **and** durable: notes/RAG survive; disks and secrets don'
 - **Authorized scope only** for live attacks
 - **Warn once** before disk-wipe / force-push main / mass prune — then proceed if confirmed
 
-## Disk (Fedora host)
-- Prefer targeted reclaim: `docker builder prune -af` (not blind image massacre unless asked)
-- AOSP prefers large free disk (`/dev/nvme0n1` notes in FYP AGENTS when relevant)
-- Don't delete the user's FYP tree or HERMES_HOME without explicit ask
+## Disk
+- Prefer targeted reclaim (builder prune, unused caches) — not blind mass deletion unless asked
+- Don't delete HERMES_HOME / this repo without explicit ask
 
 ## Sample / research handling
 | Do | Don't |
@@ -35,7 +34,7 @@ Keep the lab powerful **and** durable: notes/RAG survive; disks and secrets don'
 - Small reviewable commits; no `--no-verify` unless asked
 
 ## Qubes direction
-See `qubes/README.md` — Ollama VM vs Hermes AppVM vs disposable analysis VM. Long-term: binaries never live in the notes VM.
+See `docs/qubes-deployment.md` — Ollama VM vs Hermes AppVM vs disposable analysis VM. Long-term: binaries never live in the notes VM.
 
 ## Session end checklist
 - [ ] Notes saved under correct `workspace/` path

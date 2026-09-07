@@ -1,46 +1,70 @@
 ---
 name: lab-build
 description: >-
-  General project builds — make/ninja/cmake/meson, Gradle/Bazel, cargo, Python
-  packaging, local services. Use for building labs, tools, backends, or any
-  non-AOSP tree. For FYP AOSP sync/lunch/cf.sh use fyp-aosp-build instead.
+  Compile and package labs — make/ninja/cmake, mingw, cargo, Gradle, Python.
+  Use when building, fixing compile errors, or setting Debug/ASAN flags before
+  test/debug.
 ---
 
-# Lab build (general)
+# Lab build (compile)
 
 ## Goal
-Get a clean, repeatable build: configure → compile → smoke-test → record how.
+**Configure → compile → smoke-test** with a repeatable command line. On failure: fix the *first* error, don't thrash flags.
 
 ## When to use
-- "Build this" / "compile" / "make it run" outside the AOSP tree
-- Labs under `labs/`, backends, Python/C/Rust tools, Podman stacks
-- Reproducing a teammate's or prior-session build
-
-## AOSP exception
-If cwd / topic is FYP AOSP → use **`fyp-aosp-build`** (tag, lunch, `vsoc_x86_64_only/`, `cf.sh` only).
+- "Build / compile / link this"
+- Labs under `labs/` (RAT implants, CVE harnesses, Android samples)
+- Cross-compile (e.g. `x86_64-w64-mingw32-gcc` for Win11 lab binaries on Linux/WSL)
 
 ## Workflow
-1. Detect build system (`CMakeLists.txt`, `meson.build`, `Makefile`, `build.gradle`, `Cargo.toml`, `pyproject.toml`, `Containerfile`)
-2. Read README / existing scripts before inventing flags
-3. Out-of-tree / isolated build dirs when possible (`build/`, `out/`)
-4. Record exact commands in the lab note or report
-5. Smoke-test one binary or endpoint; capture version/`--help` or a health check
-6. On failure: jump to **`debug-triage`** (don't thrash random flags)
+1. Detect build system: `CMakeLists.txt`, `Makefile`, `meson.build`, `Cargo.toml`, `build.gradle`, `pyproject.toml`
+2. Read README / existing scripts **before** inventing flags
+3. Out-of-tree builds when possible (`build/`, `out/`)
+4. Prefer **Debug + symbols** for lab work (`-g`, `CMAKE_BUILD_TYPE=Debug`)
+5. Compile; on error → see **Compile errors** below
+6. Smoke-test (`--help`, unit test, one happy path)
+7. On runtime failure → `test-harness` then `debug-triage` / `debugger`
 
-## Defaults
+## Compile errors (discipline)
+1. Scroll to the **first** error — ignore cascade noise
+2. Classify: missing header/lib | syntax | type | link undefined ref | wrong target triple
+3. Fix minimal cause; rebuild
+4. If include/lib path hell: print the actual compile line (`make VERBOSE=1`, `ninja -v`, `cargo build -v`)
+
+| Error shape | Likely fix |
+|-------------|------------|
+| `No such file or directory: foo.h` | package/`-I` path / wrong include |
+| `undefined reference to X` | missing `-l` / object not in link |
+| `cannot find -lfoo` | install `-dev` package or `-L` |
+| mingw `WinMain` / subsystem | `-mconsole` / correct entry |
+| Android Gradle SDK missing | `local.properties` / `sdkmanager` |
+
+## Defaults by stack
 | Stack | Prefer |
 |-------|--------|
-| C/C++ | CMake + Ninja, Debug+ASAN for labs |
-| Rust | `cargo build` / `cargo test` |
-| Android app (not AOSP) | Gradle wrapper `./gradlew` |
-| Python | venv + `pip install -e .` or uv |
-| Services | Podman Compose over Docker when on this Fedora host |
+| C/C++ Linux | CMake + Ninja, `-g -O0`, optional `-fsanitize=address,undefined` |
+| C Windows cross | `x86_64-w64-mingw32-gcc`, static winpthreads if needed |
+| Rust | `cargo build` / `cargo test`; `RUSTFLAGS=-g` |
+| Android app | `./gradlew assembleDebug` |
+| Python | venv + `pip install -e .` |
 
-## Long-term habits
-- Pin toolchain / container digests in notes when reproducibility matters
-- Never commit huge `out/` trees or secrets
-- Prefer scripts in-repo (`scripts/`, `cf.sh`-style wrappers) over tribal memory
+## ASAN quick rebuild (C/C++)
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+  -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+cmake --build build
+```
+
+## Record
+Save exact build commands in the lab note. Never commit `out/` / huge artifacts.
+
+## Hand-offs
+- Crash after successful build → `debugger` / `debug-triage`
+- Need a failing check → `test-harness`
+- Android toolchain missing → `env-bootstrap` + `docs/android-workflow.md`
 
 ## Never
-- `launch_cvd` bare for FYP — that's `cf.sh`
-- Run destructive `clean` / disk wipes without confirming with the user
+- `make clean` / disk wipes without confirming
+- Ship stripped Release as the only lab binary when you still need stacks

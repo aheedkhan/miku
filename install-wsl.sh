@@ -82,6 +82,15 @@ APT_BASE=(
   less
   openssh-client
   rsync
+  # compile / debug toolchain
+  cmake
+  ninja-build
+  gdb
+  lldb
+  strace
+  ltrace
+  binutils
+  mingw-w64
 )
 
 # RAG / research / docs tooling
