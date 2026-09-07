@@ -92,6 +92,9 @@ Default for teaching: **D → C → A**. Do not jump to full-featured RAT + evas
 
 Record in every project: `OsBuild`, Defender versions, HVCI on/off, test user admin vs standard.
 
+**Lab target:** isolated Windows 11 VM only. Bind C2 to a host IP the guest can reach;
+document that IP in the project scope file. No KVM/libvirt setup lives in this repo.
+
 ## Implementation languages (user stack: C/C++, Python, Java)
 
 | Language | RAT role | Notes |
@@ -214,7 +217,7 @@ When extending OSS: **do not** commit framework secrets/keys; document module be
 | Analyst pass | `malware-analysis` |
 | CVE-driven initial access | `cve-malware-test` |
 | Intel on real RAT families | `malware-intel` |
-| Lab VM setup | `lab-build`, `env-bootstrap` |
+| Lab VM setup | `lab-build`, `env-bootstrap` (isolated Win11 guest; no KVM docs in-repo) |
 
 ## Never
 - Ship turnkey "ready to infect" packages without isolation + detection docs

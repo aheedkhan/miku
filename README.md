@@ -10,16 +10,28 @@ same model as Claude Code's own tools, just wired to a model you host yourself.
 
 ## Quickstart
 
+**Fresh WSL Debian/Ubuntu** (apt packages, Ollama, models, Hermes, RAG/research tools):
+
 ```bash
 git clone <this-repo-url> miku && cd miku
+./install-wsl.sh
+source .venv/bin/activate && miku
+```
+
+`SKIP_MODELS=1` skips the large `ollama pull`s; `SKIP_ANDROID=1` skips Android RE helpers.
+
+**Python-only** (system packages + Ollama already present):
+
+```bash
 ./install.sh
 source .venv/bin/activate && hermes
 ```
 
-That's it. `install.sh` creates a `.venv`, installs dependencies plus the `hermes` console
-script, drops a first-run `config.yaml` into `~/.config/hermes/`, and tells you whether it
+`install.sh` creates a `.venv`, installs dependencies plus the `hermes`/`miku` console
+scripts, drops a first-run `config.yaml` into `~/.config/hermes/`, and tells you whether it
 found a local Ollama to talk to. Re-run it any time you pull new dependencies — it's idempotent
-and never overwrites a config you've already edited.
+and never overwrites a config you've already edited. KVM/qemu is intentionally not part of
+this install path (WSL-friendly).
 
 ## What's included
 

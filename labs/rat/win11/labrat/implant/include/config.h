@@ -1,7 +1,7 @@
 #pragma once
 
-/* Lab C2 — change C2_HOST to your server LAN IP before deploying to Win11 VM */
-#define C2_HOST "127.0.0.1"
+/* Lab C2 — Win11 guest → host reachable from the VM (edit for your lab). */
+#define C2_HOST "10.0.2.2"
 #define C2_PORT 8080
 #define BEACON_PATH "/beacon"
 #define USER_AGENT "Mozilla/5.0 (Windows NT 10.0; Win64; x64) LabRat/0.5"

@@ -17,6 +17,9 @@ workspace/**
 labs/**/*.exe
 labs/**/*.o
 labs/**/*.dll
+labs/**/*.qcow2
+labs/**/*.iso
+labs/kvm/
 labs/**/__pycache__/
 *.egg-info/
 .pytest_cache/

