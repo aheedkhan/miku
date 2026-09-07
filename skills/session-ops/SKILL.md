@@ -38,6 +38,7 @@ Every session leaves the lab smarter than it found it.
 | Web / URL | `browsing` |
 | CVE | `cve-research` → `cve-malware-test` |
 | Setup Win11 lab from zero | `env-bootstrap` + spoon-feed `docs/windows11-lab-setup-atoz.md` |
+| TTPs / ATT&CK / techniques | `attack-ttps` → `malware-authoring` |
 | Win11 RAT | `windows-rat-dev` |
 | Android malware/RE | `android-malware-*` |
 | Build / compile | `lab-build` |

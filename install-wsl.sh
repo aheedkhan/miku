@@ -88,9 +88,13 @@ APT_BASE=(
   gdb
   lldb
   strace
-  ltrace
   binutils
   mingw-w64
+)
+
+# Soft-optional: skip cleanly if a distro mirror lacks them
+APT_SOFT=(
+  ltrace
 )
 
 # RAG / research / docs tooling
@@ -108,7 +112,7 @@ APT_ANDROID=(
   android-sdk-platform-tools-common
 )
 
-# Optional but useful for git/GitHub + PDF path
+# Optional but useful for git/GitHub + PDF path (large — soft-fail)
 APT_EXTRA=(
   gh
   texlive-latex-recommended
@@ -117,10 +121,12 @@ APT_EXTRA=(
 )
 
 sudo apt-get update -y
-sudo apt-get install -y "${APT_BASE[@]}" "${APT_RESEARCH[@]}" "${APT_EXTRA[@]}" || {
-  warn "Some optional packages failed (e.g. gh / texlive). Retrying base + research only..."
-  sudo apt-get install -y "${APT_BASE[@]}" "${APT_RESEARCH[@]}"
-}
+# Base first so a missing optional package cannot abort the whole bootstrap under set -e
+sudo apt-get install -y "${APT_BASE[@]}"
+sudo apt-get install -y "${APT_RESEARCH[@]}" || warn "Some research apt packages failed — continue; install later if needed."
+for pkg in "${APT_SOFT[@]}" "${APT_EXTRA[@]}"; do
+  sudo apt-get install -y "$pkg" || warn "Optional apt package skipped: $pkg"
+done
 
 if [ "${SKIP_ANDROID:-0}" != "1" ]; then
   info "Installing Android RE apt packages..."

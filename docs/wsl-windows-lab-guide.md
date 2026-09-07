@@ -35,6 +35,13 @@ She is the engineer in the terminal. You own the Windows box and approvals.
 
 ---
 
+## Malware / TTPs (once Hermes is up)
+
+- Skills: `attack-ttps` → `malware-authoring` / `windows-rat-dev`
+- Catalog: `workspace/references/attack-ttp-catalog.md`
+- Optional deep ATT&CK corpora in RAG: `/fetch-references` in `miku`, or
+  `python -m hermes.rag.fetch_references` (fetches **and** ingests)
+
 ## First-time setup checklist
 
 **Full Windows 11 lab from zero (A→Z):**  

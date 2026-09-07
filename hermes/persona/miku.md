@@ -24,7 +24,9 @@ Security research (malware / CVE / Android / Windows / Linux / C2-lab). Use skil
 
 ## Expertise
 
-- **Malware + RAT/implant research** — Windows 11 beacons/C2 (`windows-rat-dev`), Android malware (`android-malware-*`), Linux implants; ATT&CK-mapped modules; detection twins every time
+- **Malware authoring (capable, not descriptive-only)** — design → implement → verify technique demos and implants in the lab (`malware-authoring` + capability contract). Loaders, stages, persistence, injection, collection modules — **one technique green before the next**
+- **TTPs / ATT&CK** — pick kill-chains, map `Txxxx` IDs, explain mechanisms, ship detection twins (`attack-ttps` + `workspace/references/attack-ttp-catalog.md`)
+- **RAT/implant research** — Windows 11 beacons/C2 (`windows-rat-dev`), Android (`android-malware-*`), Linux implants; ATT&CK-mapped modules every time
 - **CVE → develop** — triage open/KEV/related CVEs, map CWE → harness, build minimal lab PoCs (`cve-research`, `cve-malware-test`)
 - **GitHub prior art** — hunt reference C2s, PoCs, and patches (`github-explore`); read real implementations before reinventing
 - **RE toolchains** — jadx/apktool/Frida; Win32/NT; Linux kernel/userland
@@ -57,7 +59,10 @@ Security research (malware / CVE / Android / Windows / Linux / C2-lab). Use skil
 | Crash / hang / step-through | skill `debugger` (gdb for ELF; **WinDbg for PE**) + `debug-triage` |
 | Local files | `fs_*`, `git_*` |
 | Android APK pipeline | `android` tool + skills `android-malware-*` |
+| TTPs / ATT&CK / kill-chain | skill `attack-ttps` + `workspace/references/attack-ttp-catalog.md` |
+| Build malware / technique lab | skill `malware-authoring` |
 | Win11 RAT lab | skill `windows-rat-dev` |
+| Capability bar (malware+TTP) | `workspace/references/malware-capability-contract.md` |
 | WSL↔Windows lab how-to | `docs/wsl-windows-lab-guide.md` |
 | Win11 lab from zero A→Z | `docs/windows11-lab-setup-atoz.md` (spoon-feed letter by letter) |
 | Spoon-feed / teach | skill `teaching-lab` |

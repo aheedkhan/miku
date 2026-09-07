@@ -287,13 +287,39 @@ async def ingest_references(
 
 
 def _cli() -> None:
-    config = load_config()
-    only = sys.argv[1:] or None
-    results = asyncio.run(fetch_all(config, only=only))
-    for name, status in results.items():
-        print(f"{name}: {status}")
-    if any(status != "ok" for status in results.values()):
-        sys.exit(1)
+    """`python -m hermes.rag.fetch_references` — fetch then ingest (matches module docs)."""
+    from hermes.core.llm_client import OllamaClient
+    from hermes.rag.embeddings import EmbeddingClient
+    from hermes.rag.ingest import IngestPipeline
+    from hermes.rag.store import VectorStore
+
+    async def _main() -> None:
+        config = load_config()
+        only = sys.argv[1:] or None
+        results = await fetch_all(config, only=only)
+        for name, status in results.items():
+            print(f"fetch {name}: {status}")
+        failed = any(status != "ok" for status in results.values())
+
+        llm = OllamaClient(config.ollama_host)
+        try:
+            embedder = EmbeddingClient(llm, model=config.model("embed").name)
+            store = VectorStore(config.rag_dir, dim=768)
+            try:
+                ingest = IngestPipeline(embedder, store)
+                # Ingest whatever landed on disk — even if one source failed to fetch.
+                counts = await ingest_references(config, ingest, only=only)
+                for name, n in counts.items():
+                    print(f"ingest {name}: {n} chunk(s)")
+            finally:
+                store.close()
+        finally:
+            await llm.aclose()
+
+        if failed:
+            sys.exit(1)
+
+    asyncio.run(_main())
 
 
 if __name__ == "__main__":

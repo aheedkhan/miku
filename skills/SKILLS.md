@@ -30,7 +30,8 @@ Names below are what the model sees in the system prompt.
 | `cve-research` | Triage CVE / advisory / patch |
 | `cve-malware-test` | Build lab harness for a CVE |
 | `daily-android-cve` | Daily Android/CVE digest |
-| `malware-authoring` | Design/build malware (lab) |
+| `attack-ttps` | ATT&CK / TTP pick, map, kill-chain, detection twins |
+| `malware-authoring` | Design/build malware & technique labs |
 | `malware-analysis` | Triage unknown samples |
 | `malware-intel` | Family cards / MalwareBazaar |
 | `windows-rat-dev` | Win11 implant / C2 lab |

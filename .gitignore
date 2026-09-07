@@ -20,6 +20,8 @@ workspace/**
 !workspace/cves/**
 !workspace/malware-analysis/
 !workspace/malware-analysis/**
+!workspace/malware-reports/
+!workspace/malware-reports/README.md
 labs/**/*.exe
 labs/**/*.o
 labs/**/*.dll

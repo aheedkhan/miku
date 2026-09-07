@@ -21,7 +21,10 @@ Companion for RAG — how the expert agent should reach for tools.
 
 ## Skill playbooks (load with use_skill)
 See `skills/SKILLS.md`. Highlights: `github-explore`, `research-pipeline`, `cve-research`,
-`cve-malware-test`, `windows-rat-dev`, `android-malware-*`, `knowledge-rag`, `browsing`.
+`attack-ttps`, `malware-authoring`, `cve-malware-test`, `windows-rat-dev`, `android-malware-*`, `knowledge-rag`, `browsing`.
+
+Malware+TTP capability bar: `workspace/references/malware-capability-contract.md`
+Catalog: `workspace/references/attack-ttp-catalog.md`
 
 ## Default investigate loop
 1. `rag_query`

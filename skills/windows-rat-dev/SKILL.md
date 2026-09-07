@@ -32,7 +32,8 @@ third-party deployment or "FUD for real targets."
 1. RAG: `workspace/references/curated-links.md`
 2. RAG: `workspace/os-internals/windows/defender-win11-lab.md`
 3. RAG: `workspace/malware-authoring/rat/architecture.md`
-4. Skills: `malware-authoring`, `windows-api`, `malware-analysis`, `wsl-windows-exe`, `lab-iterate`
+4. Skills: `attack-ttps` (TTP roadmap), `malware-authoring`, `windows-api`, `malware-analysis`, `wsl-windows-exe`, `lab-iterate`
+5. Catalog: `workspace/references/attack-ttp-catalog.md` — map every module to IDs
 
 ## Build strategy (pick explicitly)
 

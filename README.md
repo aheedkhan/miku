@@ -26,6 +26,10 @@ source .venv/bin/activate && miku
 
 Say `spoon-feed Windows lab` for step-by-step VM setup.
 
+**Malware / TTPs:** skills `attack-ttps`, `malware-authoring`, `windows-rat-dev` + catalog
+`workspace/references/attack-ttp-catalog.md`. For full MITRE corpora in RAG, run
+`/fetch-references` (or `python -m hermes.rag.fetch_references`) once.
+
 **Python-only** (system packages + Ollama already present):
 
 ```bash
